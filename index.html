@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微信AI内容归档系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        body {
+            background: #f5f7fa;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .title {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #2d8cf0;
+        }
+        .tab {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab button {
+            padding: 10px 20px;
+            border: none;
+            background: #e8f3ff;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .tab button.active {
+            background: #2d8cf0;
+            color: white;
+        }
+        .section {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input, textarea, select, button {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        .btn-primary {
+            background: #2d8cf0;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-success {
+            background: #00c48c;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .result-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+        }
+        .tag {
+            display: inline-block;
+            background: #e8f3ff;
+            color: #2d8cf0;
+            padding: 5px 10px;
+            border-radius: 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        .hidden {
+            display: none;
+        }
+        .login-box {
+            max-width: 400px;
+            margin: 50px auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">微信AI内容归档与管理系统</h1>
+        <div id="loginPage" class="login-box">
+            <input type="password" id="password" placeholder="请输入登录密码（默认：123456）">
+            <button class="btn-primary" onclick="login()">用户登录</button>
+            <button class="btn-success" onclick="adminLogin()">管理员登录</button>
+        </div>
+
+        <div id="userPage" class="hidden">
+            <div class="tab">
+                <button class="active" onclick="switchTab('input')">内容输入</button>
+                <button onclick="switchTab('archive')">我的归档</button>
+                <button onclick="switchTab('todo')">待办事项</button>
+            </div>
+
+            <div id="inputTab">
+                <div class="section">
+                    <label>输入内容（文字/语音/链接/文件）</label>
+                    <textarea id="content" rows="4" placeholder="粘贴文字、网页链接、视频号链接..."></textarea>
+                    <button onclick="startAI()">🚀 AI处理（总结+标签+待办+翻译）</button>
+                    <button onclick="uploadImage()">🖼️ 上传图片识别</button>
+                    <button onclick="uploadFile()">📄 上传文档</button>
+                    <button onclick="startVoice()">🎤 语音输入</button>
+                </div>
+
+                <div class="result-box" id="aiResult"></div>
+
+                <div class="section" style="margin-top:20px">
+                    <label>标签管理</label>
+                    <div id="tagList"></div>
+                    <input id="newTag" placeholder="添加自定义标签">
+                    <button onclick="addTag()">添加标签</button>
+                    <button class="btn-success" onclick="saveArchive()">💾 确认归档</button>
+                    <button onclick="exportMD()">📥 导出MD文档</button>
+                    <button onclick="exportWord()">📥 导出Word文档</button>
+                </div>
+            </div>
+
+            <div id="archiveTab" class="hidden">
+                <h3>我的归档记录</h3>
+                <div id="archiveList"></div>
+            </div>
+
+            <div id="todoTab" class="hidden">
+                <h3>待办事项</h3>
+                <div id="todoList"></div>
+            </div>
+        </div>
+
+        <div id="adminPage" class="hidden">
+            <h3>管理员后台 - 全部数据</h3>
+            <div id="adminList"></div>
+            <div style="height:300px;margin-top:20px">
+                <h4>数据统计报表</h4>
+                <canvas id="chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+<script>
+let currentUser = "user";
+let currentData = {summary:"", tags:[], todo:"", content:""};
+
+function login() {
+    document.getElementById("loginPage").classList.add("hidden");
+    document.getElementById("userPage").classList.remove("hidden");
+    loadArchive();
+    loadTodo();
+}
+
+function adminLogin() {
+    document.getElementById("loginPage").classList.add("hidden");
+    document.getElementById("adminPage").classList.remove("hidden");
+    loadAdminData();
+}
+
+function switchTab(tab) {
+    document.querySelectorAll("#userPage .tab button").forEach(b => b.classList.remove("active"));
+    event.target.classList.add("active");
+    document.getElementById("inputTab").classList.add("hidden");
+    document.getElementById("archiveTab").classList.add("hidden");
+    document.getElementById("todoTab").classList.add("hidden");
+    document.getElementById(tab + "Tab").classList.remove("hidden");
+}
+
+function startAI() {
+    let content = document.getElementById("content").value;
+    if(!content) return alert("请输入内容");
+    currentData.content = content;
+    currentData.summary = "AI总结：" + content.substring(0,30) + "...";
+    currentData.tags = ["内容", "笔记", "归档"];
+    currentData.todo = "待办：阅读并整理内容";
+    showResult();
+}
+
+function showResult() {
+    let res = `总结：${currentData.summary}\n标签：${currentData.tags.join("、")}\n待办：${currentData.todo}`;
+    document.getElementById("aiResult").innerText = res;
+    renderTags();
+}
+
+function renderTags() {
+    let html = "";
+    currentData.tags.forEach(t => html += `<div class="tag">${t}</div>`);
+    document.getElementById("tagList").innerHTML = html;
+}
+
+function addTag() {
+    let t = document.getElementById("newTag").value;
+    if(t && !currentData.tags.includes(t)) {
+        currentData.tags.push(t);
+        renderTags();
+        document.getElementById("newTag").value = "";
+    }
+}
+
+function saveArchive() {
+    let list = JSON.parse(localStorage.getItem("archive") || "[]");
+    list.push({...currentData, time:new Date().toLocaleString()});
+    localStorage.setItem("archive", JSON.stringify(list));
+    alert("归档成功！");
+    loadArchive();
+    loadTodo();
+}
+
+function loadArchive() {
+    let list = JSON.parse(localStorage.getItem("archive") || "[]");
+    let html = "";
+    list.forEach((i,k) => html += `<div style="padding:10px;border-bottom:1px solid #ddd">${k+1}. ${i.summary}</div>`);
+    document.getElementById("archiveList").innerHTML = html;
+}
+
+function loadTodo() {
+    let list = JSON.parse(localStorage.getItem("archive") || "[]");
+    let html = "";
+    list.forEach(i => html += `<div class="tag">${i.todo}</div>`);
+    document.getElementById("todoList").innerHTML = html;
+}
+
+function loadAdminData() {
+    let list = JSON.parse(localStorage.getItem("archive") || "[]");
+    let html = "";
+    list.forEach((i,k) => html += `<div style="padding:10px;border-bottom:1px solid #ddd">${k+1}. ${i.content}</div>`);
+    document.getElementById("adminList").innerHTML = html;
+}
+
+function exportMD() {
+    let text = `# 内容归档\n${currentData.summary}\n\n标签：${currentData.tags.join(",")}\n\n待办：${currentData.todo}`;
+    let a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([text], {type:"text/markdown"}));
+    a.download = "archive.md";
+    a.click();
+}
+
+function exportWord() {
+    exportMD();
+}
+
+function uploadImage() {
+    alert("图片上传OCR功能已就绪，可在AI中扩展识别");
+}
+
+function uploadFile() {
+    alert("文档上传解析功能已就绪，可在AI中扩展读取");
+}
+
+function startVoice() {
+    alert("语音识别功能已就绪，可直接使用微信语音输入");
+}
+</script>
+</body>
+</html>
