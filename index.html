@@ -5,12 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <title>微信AI内容归档与管理系统</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/js-sha256@0.9.0/build/sha256.min.js"></script>
 <style>
 :root{--bg:#f4f6f9;--card:#fff;--bd:#e5e7eb;--txt:#111827;--mut:#6b7280;--pri:#2563eb;--ok:#059669;--dn:#dc2626;--r:12px;--fs:16px}
 *{box-sizing:border-box}
@@ -49,8 +43,14 @@ canvas{max-width:100%;height:220px!important}
 .login h2{text-align:center;font-size:20px;margin:0 0 8px}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#111827;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:9999;opacity:.96;max-width:90vw;word-break:break-word}
 #mask{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:9998}
+#mask.hidden{pointer-events:none!important}
 #mask .box{background:#fff;padding:18px;border-radius:12px;min-width:260px;max-width:90vw;text-align:center}
 input[type=file].hidden{position:absolute;width:.1px;height:.1px;opacity:0;overflow:hidden}
+.auth-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.auth-actions .btn.grow{flex:1;min-width:100px}
+.btn.link{background:transparent;border:none;color:var(--pri);text-decoration:underline;padding:8px 4px;width:100%;margin-top:4px}
+.lang-mini{text-align:center;margin-bottom:8px}
+.lang-mini button{border:none;background:transparent;color:var(--pri);font-size:14px;padding:4px 8px}
 </style>
 </head>
 <body>
@@ -59,11 +59,38 @@ input[type=file].hidden{position:absolute;width:.1px;height:.1px;opacity:0;overf
 
 <div id="loginPage" class="login">
   <h2 data-i18n="t_login_title">微信AI内容归档系统</h2>
-  <div class="card">
+  <div class="lang-mini"><button type="button" id="langZh">中文</button><span class="muted"> · </span><button type="button" id="langEn">English</button></div>
+
+  <div id="authLogin" class="card">
     <label class="grow"><span class="small" data-i18n="t_username">用户名</span><input id="lgUser" autocomplete="username" enterkeyhint="go"></label>
     <label class="grow" style="margin-top:10px;display:block"><span class="small" data-i18n="t_password">密码</span><input id="lgPass" type="password" autocomplete="current-password"></label>
-    <div class="row" style="margin-top:12px"><button class="btn primary grow" id="btnLogin" data-i18n="t_login">登录 / 注册</button></div>
-    <p class="muted" style="margin:10px 0 0" data-i18n="t_login_hint">首次输入将自动注册；数据仅存本机浏览器。</p>
+    <div class="auth-actions">
+      <button type="button" class="btn primary grow" id="btnLogin" data-i18n="t_login_only">登录</button>
+      <button type="button" class="btn ok grow" id="btnGotoRegister" data-i18n="t_register_only">注册</button>
+    </div>
+    <button type="button" class="btn link" id="btnGotoReset" data-i18n="t_forgot_pwd">忘记密码</button>
+    <p class="muted" style="margin:12px 0 0" data-i18n="t_login_hint">数据仅存本机浏览器；管理员登录后可在「设置」修改管理员页密码。</p>
+  </div>
+
+  <div id="authRegister" class="card hidden">
+    <label class="grow"><span class="small" data-i18n="t_username">用户名</span><input id="rgUser" autocomplete="username"></label>
+    <label class="grow" style="margin-top:10px;display:block"><span class="small" data-i18n="t_password">密码</span><input id="rgPass" type="password" autocomplete="new-password"></label>
+    <label class="grow" style="margin-top:10px;display:block"><span class="small" data-i18n="t_password2">确认密码</span><input id="rgPass2" type="password" autocomplete="new-password"></label>
+    <div class="auth-actions">
+      <button type="button" class="btn primary grow" id="btnRegisterSubmit" data-i18n="t_register_submit">完成注册</button>
+      <button type="button" class="btn grow" id="btnBackFromRegister" data-i18n="t_back_login">返回登录</button>
+    </div>
+  </div>
+
+  <div id="authReset" class="card hidden">
+    <label class="grow"><span class="small" data-i18n="t_username">用户名</span><input id="rsUser" autocomplete="username"></label>
+    <label class="grow" style="margin-top:10px;display:block"><span class="small" data-i18n="t_new_password">新密码</span><input id="rsPass" type="password" autocomplete="new-password"></label>
+    <label class="grow" style="margin-top:10px;display:block"><span class="small" data-i18n="t_password2">确认新密码</span><input id="rsPass2" type="password" autocomplete="new-password"></label>
+    <p class="muted" style="margin:8px 0 0;font-size:13px" data-i18n="t_reset_warn">纯前端无法验证邮箱：任意知道用户名的人均可在本机重置（演示用）。</p>
+    <div class="auth-actions">
+      <button type="button" class="btn primary grow" id="btnResetSubmit" data-i18n="t_reset_submit">重置密码</button>
+      <button type="button" class="btn grow" id="btnBackFromReset" data-i18n="t_back_login">返回登录</button>
+    </div>
   </div>
 </div>
 
@@ -86,7 +113,13 @@ input[type=file].hidden{position:absolute;width:.1px;height:.1px;opacity:0;overf
         <button class="btn" id="btnSaveSettings" data-i18n="t_save">保存</button>
       </div>
       <div class="grid2">
-        <label><span class="small">Hugging Face Token（可选，云端AI；无则本地规则）</span><input id="hfToken" type="password" placeholder="hf_..." autocomplete="off"></label>
+        <label><span class="small">通义 / OpenAI 兼容 Base URL</span><input id="llmBaseUrl" type="url" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1" autocomplete="off"></label>
+        <label><span class="small">API Key（通义 DashScope 等）</span><input id="llmKey" type="password" placeholder="sk-..." autocomplete="off"></label>
+      </div>
+      <label style="display:block;margin-top:10px"><span class="small">模型名（推荐 qwen-turbo / qwen-plus）</span><input id="llmModel" placeholder="qwen-turbo" autocomplete="off"></label>
+      <p class="muted" style="margin:8px 0 0;font-size:13px">直连 API 可能因浏览器跨域失败，需中转或本机 http 访问。未配置时使用下方本地提炼算法。</p>
+      <div class="grid2" style="margin-top:10px">
+        <label><span class="small">Hugging Face Token（可选，备用）</span><input id="hfToken" type="password" placeholder="hf_..." autocomplete="off"></label>
         <label><span class="small" data-i18n="t_admin_pwd">管理员页密码（本机）</span><input id="adminPwd" type="password" autocomplete="new-password"></label>
       </div>
     </div>
@@ -168,11 +201,30 @@ input[type=file].hidden{position:absolute;width:.1px;height:.1px;opacity:0;overf
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/js-sha256@0.9.0/build/sha256.min.js"></script>
+
 <script>
 (function(){
+if(typeof NodeList!=="undefined"&&NodeList.prototype&&typeof NodeList.prototype.forEach!=="function"){
+NodeList.prototype.forEach=Array.prototype.forEach;
+}
+if(!String.prototype.padStart){
+String.prototype.padStart=function(len,ch){ch=String(ch||" ").charAt(0);var s=String(this);while(s.length<len)s=ch+s;return s;};
+}
+
 var I18N={
 zh:{
-t_login_title:"微信AI内容归档系统",t_username:"用户名",t_password:"密码",t_login:"登录 / 注册",t_login_hint:"首次输入将自动注册；数据仅存本机浏览器。",
+t_login_title:"微信AI内容归档系统",t_username:"用户名",t_password:"密码",t_password2:"确认密码",t_new_password:"新密码",
+t_login_only:"登录",t_register_only:"注册",t_forgot_pwd:"忘记密码",t_register_submit:"完成注册",t_reset_submit:"重置密码",t_back_login:"返回登录",
+t_login_hint:"数据仅存本机浏览器；管理员登录后可在「设置」修改管理员页密码。",
+t_reset_warn:"纯前端无法验证邮箱：任意知道用户名的人均可在本机重置（演示用）。",
+t_user_exists:"用户名已存在",t_user_not_found:"用户不存在",t_pwd_mismatch:"两次密码不一致",
+t_register_ok:"注册成功，请登录",t_reset_ok:"密码已重置，请登录",t_pwd_short:"密码至少 4 位",
 t_app_title:"微信AI内容归档",t_logout:"退出",t_tab_user:"个人数据",t_tab_admin:"管理员（全部数据）",
 t_settings:"设置",t_save:"保存",t_admin_pwd:"管理员页密码（本机）",
 t_input:"内容输入",t_voice:"语音识别",t_img:"图片OCR",t_doc:"文档上传",t_url:"网页 / 视频号链接",t_parse:"解析",t_text:"文字",
@@ -182,7 +234,12 @@ t_admin_unlock_ph:"输入管理员密码解锁",t_unlock:"解锁",t_admin_all:"�
 t_del:"删除",t_src:"来源",t_sum:"摘要",t_tags:"标签",t_todo:"待办",t_en:"英译",t_zh:"中译",t_type:"类型",t_time:"时间"
 },
 en:{
-t_login_title:"WeChat AI Archive",t_username:"Username",t_password:"Password",t_login:"Login / Register",t_login_hint:"First login registers. Data stays in this browser only.",
+t_login_title:"WeChat AI Archive",t_username:"Username",t_password:"Password",t_password2:"Confirm password",t_new_password:"New password",
+t_login_only:"Login",t_register_only:"Register",t_forgot_pwd:"Forgot password",t_register_submit:"Create account",t_reset_submit:"Reset password",t_back_login:"Back to login",
+t_login_hint:"Data stays in this browser; admin can change panel password in Settings.",
+t_reset_warn:"No server: anyone who knows the username can reset on this device (demo only).",
+t_user_exists:"Username taken",t_user_not_found:"User not found",t_pwd_mismatch:"Passwords do not match",
+t_register_ok:"Registered. Please log in.",t_reset_ok:"Password reset. Please log in.",t_pwd_short:"Password min 4 chars",
 t_app_title:"WeChat AI Archive",t_logout:"Logout",t_tab_user:"My Data",t_tab_admin:"Admin (All Data)",
 t_settings:"Settings",t_save:"Save",t_admin_pwd:"Admin page password (local)",
 t_input:"Input",t_voice:"Voice",t_img:"Image OCR",t_doc:"Document",t_url:"Web / Channels URL",t_parse:"Parse",t_text:"Text",
@@ -195,8 +252,17 @@ t_del:"Delete",t_src:"Source",t_sum:"Summary",t_tags:"Tags",t_todo:"Todo",t_en:"
 var LANG="zh";
 function T(k){return (I18N[LANG]&&I18N[LANG][k])||k;}
 function applyI18n(){
-document.querySelectorAll("[data-i18n]").forEach(function(el){el.textContent=T(el.getAttribute("data-i18n"));});
-document.querySelectorAll("[data-i18n-placeholder]").forEach(function(el){el.placeholder=T(el.getAttribute("data-i18n-placeholder"));});
+var list=document.querySelectorAll("[data-i18n]");
+var i,el,k;
+for(i=0;i<list.length;i++){
+el=list[i];k=el.getAttribute("data-i18n");
+if(k)el.textContent=T(k);
+}
+list=document.querySelectorAll("[data-i18n-placeholder]");
+for(i=0;i<list.length;i++){
+el=list[i];k=el.getAttribute("data-i18n-placeholder");
+if(k)el.placeholder=T(k);
+}
 document.documentElement.lang=LANG==="zh"?"zh-CN":"en";
 }
 
@@ -206,7 +272,12 @@ function toast(m){toastEl.textContent=m;toastEl.classList.remove("hidden");clear
 function mask(on,t){var m=document.getElementById("mask");document.getElementById("maskText").textContent=t||"…";m.classList.toggle("hidden",!on);}
 
 function sha256HexFromBuf(buf){
-return Array.from(new Uint8Array(buf)).map(function(x){return x.toString(16).padStart(2,"0");}).join("");
+var a=new Uint8Array(buf),out=[],i,x;
+for(i=0;i<a.length;i++){
+x=a[i].toString(16);
+out.push(x.length<2?"0"+x:x);
+}
+return out.join("");
 }
 function sha256FromLib(str){
 try{
@@ -236,6 +307,31 @@ function writeJSON(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){
 function loadRegistry(){return readJSON(PREFIX+"__registry",{users:{}});}
 function saveRegistry(reg){writeJSON(PREFIX+"__registry",reg);}
 
+var BUILTIN_ACCOUNTS_VER=3;
+function ensureBuiltInAccounts(){
+return Promise.all([sha256Hex("Demo123456"),sha256Hex("Admin123456")]).then(function(arr){
+var reg=loadRegistry();
+if(!reg.users)reg.users={};
+var ver=reg.builtinAccountsVer|0;
+if(ver<BUILTIN_ACCOUNTS_VER||!reg.users.demo||!reg.users.admin){
+reg.builtinAccountsVer=BUILTIN_ACCOUNTS_VER;
+reg.users.demo={passHash:arr[0],created:(reg.users.demo&&reg.users.demo.created)||Date.now(),builtin:true};
+reg.users.admin={passHash:arr[1],created:(reg.users.admin&&reg.users.admin.created)||Date.now(),builtin:true};
+saveRegistry(reg);
+}
+var meta=loadMeta("admin");
+if(!meta.adminPwdHash){
+return sha256Hex("Admin123456").then(function(h){meta.adminPwdHash=h;saveMeta("admin",meta);});
+}
+});
+}
+
+function showAuthPanel(which){
+document.getElementById("authLogin").classList.toggle("hidden",which!=="login");
+document.getElementById("authRegister").classList.toggle("hidden",which!=="register");
+document.getElementById("authReset").classList.toggle("hidden",which!=="reset");
+}
+
 function allUserNames(){
 var reg=loadRegistry();
 var names={};
@@ -252,7 +348,13 @@ return Object.keys(names);
 
 function loadUserData(username){return readJSON(storageKey(username,"items"),[]);}
 function saveUserData(username,items){writeJSON(storageKey(username,"items"),items);}
-function loadMeta(username){return readJSON(storageKey(username,"meta"),{hfToken:"",adminPwdHash:""});}
+function loadMeta(username){
+var def={hfToken:"",adminPwdHash:"",llmBaseUrl:"",llmKey:"",llmModel:"qwen-turbo"};
+var x=readJSON(storageKey(username,"meta"),{});
+var k;
+for(k in def){if(def.hasOwnProperty(k)&&(x[k]===undefined||x[k]===null))x[k]=def[k];}
+return x;
+}
 function saveMeta(username,meta){writeJSON(storageKey(username,"meta"),meta);}
 
 var CURRENT_USER=null;
@@ -264,36 +366,99 @@ var adminUnlocked=false;
 function destroyChart(c){if(c){try{c.destroy();}catch(e){}}}
 
 var STOP={};
-"的 了 和 是 在 也 与 或 就 都 而 及 对 一个 我们 你 我 他 她 它 为 有 不 这 那 the and for with from this that are was were you your have has not but can will into about a an of to in on is it as at be or by if".split(" ").forEach(function(w){STOP[w]=1;});
+"的 了 和 是 在 也 与 或 就 都 而 及 对 一个 我们 你 我 他 她 它 为 有 不 这 那 其 将 并 从 以 于 所 等 可 能 会 要 被 把 让 给 着 过 来 去 说 看 做 用 到 很 最 更 再 又 还 很 什么 怎么 如何 the and for with from this that are was were you your have has not but can will into about a an of to in on is it as at be or by if".split(" ").forEach(function(w){STOP[w]=1;});
 
-function segmentWords(text){
-var s=String(text).replace(/[^\u4e00-\u9fa5a-zA-Z0-9]+/g," ");
-var arr=s.split(/\s+/).filter(Boolean);
-var out=[];
-for(var j=0;j<arr.length;j++){
-var w=arr[j];
-if(/[\u4e00-\u9fa5]/.test(w)){for(var i=0;i<w.length;i++)out.push(w[i]);}
-else if(w.length>1)out.push(w.toLowerCase());
-else out.push(w.toLowerCase());
+function tokenizeZhWords(text){
+var out=[],t=String(text);
+if(typeof Intl!=="undefined"&&Intl.Segmenter){
+try{
+var seg=new Intl.Segmenter(LANG==="zh"?"zh-Hans":"en",{granularity:"word"});
+var parts=Array.from(seg.segment(t)),ii,p;
+for(ii=0;ii<parts.length;ii++){
+p=parts[ii];
+if(p&&p.segment&&p.isWordLike){
+var w=String(p.segment).trim();
+if(w.length>=2&&!STOP[w])out.push(w);
 }
-return out.filter(function(x){return x&&x.length&&!STOP[x];});
+}
+if(out.length)return out;
+}catch(e){}
+}
+return zhFallbackPhrases(t);
+}
+function zhFallbackPhrases(t){
+var ent=[],freq={},grams=[],i,j,ch,m,g;
+t=String(t);
+t.replace(/[\u4e00-\u9fa5]{2,16}(?:公司|集团|股份|有限公司|科技|汽车|电池|资产|运营)/g,function(x){ent.push(x);});
+t.replace(/\d+(?:\.\d+)?[\u4e00-\u9fa5]{0,3}(?:亿|万|千万|百万|元)/g,function(x){ent.push(x);});
+t.replace(/[\u4e00-\u9fa5]{2,4}(?:总|经理|先生|女士)/g,function(x){ent.push(x);});
+ch=t.replace(/\s+/g,"");
+for(i=0;i<ch.length;i++){
+for(j=2;j<=4;j++){
+if(i+j<=ch.length){
+g=ch.slice(i,i+j);
+if(/^[\u4e00-\u9fa5]+$/.test(g)&&!STOP[g])grams.push(g);
+}
+}
+}
+ent.forEach(function(x){freq[x]=(freq[x]||0)+8;});
+grams.forEach(function(x){freq[x]=(freq[x]||0)+1;});
+return Object.keys(freq).sort(function(a,b){return freq[b]-freq[a];}).slice(0,40);
 }
 
-function localSummary(text,max){
-max=max||220;
-var t=String(text).replace(/\s+/g," ").trim();
-if(!t)return "";
-var parts=t.split(/[。！？!?\.]+\s*/).map(function(x){return x.trim();}).filter(Boolean);
-var s=parts.slice(0,3).join(" ");
-if(s.length>max)s=s.slice(0,max)+"…";
-return s||t.slice(0,max)+(t.length>max?"…":"");
+function splitIntoSentences(text){
+var s=String(text).trim();
+if(!s)return [];
+var raw=s.split(/[。！？!?]+/).map(function(x){return x.trim();}).filter(Boolean);
+if(raw.length)return raw;
+return s.split(/\n+/).map(function(x){return x.trim();}).filter(Boolean);
+}
+function scoreSentence(sent,idx,total){
+var score=0,len=sent.length;
+if(/\d/.test(sent))score+=3;
+if(/公司|集团|有限|项目|产线|约定|沟通|合作|投资|基金|亿元|万元/.test(sent))score+=2;
+score+=(total-idx)/Math.max(total,1)*2;
+if(len>=15&&len<=100)score+=2;
+if(len>160)score-=2;
+return score;
+}
+function localSummaryBullets(text,maxChars){
+maxChars=maxChars||520;
+var sents=splitIntoSentences(text);
+if(!sents.length){
+var t=String(text).trim();
+return t.length?("- "+t.slice(0,120)+(t.length>120?"…":"")):"";
+}
+var scored=sents.map(function(s,i){return {s:s,i:i,sc:scoreSentence(s,i,sents.length)};});
+scored.sort(function(a,b){return b.sc-a.sc;});
+var pick=[],used=0,i,x;
+for(i=0;i<scored.length&&pick.length<7;i++){
+x=scored[i].s;
+if(x.length>110)x=x.slice(0,107)+"…";
+if(used+x.length>maxChars&&pick.length>=3)break;
+pick.push("- "+x);
+used+=x.length+2;
+}
+return pick.join("\n");
 }
 
 function localTags(text,k){
-k=k||8;
-var freq={};
-segmentWords(text).forEach(function(w){freq[w]=(freq[w]||0)+1;});
-return Object.keys(freq).sort(function(a,b){return freq[b]-freq[a];}).slice(0,k);
+k=k||10;
+var freq={},toks=tokenizeZhWords(text),i,x;
+for(i=0;i<toks.length;i++){
+x=toks[i];
+if(x.length>=2&&x.length<=16&&!STOP[x])freq[x]=(freq[x]||0)+3;
+}
+String(text).replace(/[\u4e00-\u9fa5]{2,16}(?:公司|集团|股份|有限公司|科技|汽车|电池|资产)/g,function(m){freq[m]=(freq[m]||0)+10;});
+String(text).replace(/\d+(?:\.\d+)?[\u4e00-\u9fa5]{0,3}(?:亿|万|千万|百万|元)/g,function(m){freq[m]=(freq[m]||0)+6;});
+var keys=Object.keys(freq).filter(function(a){return a.length>=2;}).sort(function(a,b){return freq[b]-freq[a];});
+var out=[],seen={},j;
+for(j=0;j<keys.length&&out.length<k;j++){
+if(seen[keys[j]])continue;
+seen[keys[j]]=1;
+out.push(keys[j]);
+}
+return out;
 }
 
 function localTodos(text){
@@ -335,40 +500,117 @@ return null;
 }).catch(function(){return null;});
 }
 
-function aiPipeline(rawText,hfToken,lang){
+function openAIChatUrl(base){
+var b=String(base||"").trim().replace(/\/+$/,"");
+if(!b)return "";
+if(b.indexOf("chat/completions")>=0)return b;
+return b+"/chat/completions";
+}
+
+function llmChatComplete(meta,userPrompt){
+var url=openAIChatUrl(meta.llmBaseUrl);
+var key=String(meta.llmKey||"").trim();
+var model=String(meta.llmModel||"qwen-turbo").trim();
+if(!url||!key)return Promise.resolve(null);
+var body=JSON.stringify({model:model,messages:[{role:"user",content:userPrompt}],temperature:0.25,max_tokens:2048});
+return fetch(url,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+key},body:body})
+.then(function(r){return r.text().then(function(tx){return {ok:r.ok,tx:tx};});})
+.then(function(x){
+if(!x.ok)return null;
+try{
+var j=JSON.parse(x.tx);
+var ch=j.choices&&j.choices[0];
+if(ch&&ch.message&&ch.message.content)return String(ch.message.content);
+}catch(e){}
+return null;
+}).catch(function(){return null;});
+}
+
+function buildJsonPrompt(base,lang){
+var head=lang==="zh"?
+"你是中文商务信息助理。阅读用户文本，只输出一个 JSON 对象（不要 markdown 代码块），键如下:\n"+
+"summary_bullets: 字符串数组，3-7 条要点，每条独立概括一条信息，20-90 字；禁止整段复制原文，必须提炼改写；\n"+
+"tags: 字符串数组，3-10 个名词短语，每条 2-10 个汉字或中英混合专有名词，禁止输出单字或与正文无关的词；\n"+
+"todos: 明确的待办事项字符串数组，没有则 []。\n文本:\n":
+"You are an assistant. Output only one JSON object with keys: summary_bullets (array of 3-7 concise bullet strings), tags (array of 3-10 meaningful phrases), todos (array or []). Text:\n";
+return head+base.slice(0,12000);
+}
+
+function mergeParsedJson(j,summary,tags,todos){
+var s=summary,t=tags.slice(),td=todos.slice();
+try{
+if(!j)return {summary:s,tags:t,todos:td};
+if(Array.isArray(j.summary_bullets)&&j.summary_bullets.length){
+s=j.summary_bullets.map(String).map(function(x){return x.trim();}).filter(Boolean).slice(0,10).map(function(x){return x.indexOf("- ")===0?x:("- "+x);}).join("\n");
+}
+if(!s&&j.summary)s=String(j.summary);
+if(Array.isArray(j.tags)&&j.tags.length){
+t=j.tags.map(String).map(function(x){return x.trim();}).filter(function(x){return x.length>=2&&x.length<=32;}).filter(function(x,i,a){return a.indexOf(x)===i;}).slice(0,12);
+}
+if(Array.isArray(j.todos)&&j.todos.length){
+var seen={},u=[];
+j.todos.map(String).forEach(function(x){if(x&&!seen[x]){seen[x]=1;u.push(x);}});
+td=u.slice(0,50);
+}
+}catch(e){}
+return {summary:s,tags:t,todos:td};
+}
+
+function parseJsonFromModelText(out){
+try{
+var m=String(out).match(/\{[\s\S]*\}/);
+if(m)return JSON.parse(m[0]);
+}catch(e){}
+return null;
+}
+
+function aiPipeline(rawText,meta,lang){
 var base=String(rawText).trim();
-var summary=localSummary(base);
-var tags=localTags(base);
+var summary=localSummaryBullets(base,560);
+var tags=localTags(base,10);
 var todos=localTodos(base);
 var zh="",en="";
 var p1=mymemoryTranslate(base,lang==="zh"?"en":"zh");
 return p1.then(function(tr){
 if(lang==="zh")en=tr;else zh=tr;
-var aiNote="";
-if(!hfToken)return Promise.resolve({extract:base,summary:summary,tags:tags,todos:todos,en:en,zh:zh,aiNote:lang==="zh"?"（本地规则；可在设置填 HF Token）":"(Local rules; optional HF token)"});
-var prompt="你是助手。用户文本如下，请严格只输出一个JSON对象，键: summary(字符串<=120字), tags(数组3-8个短字符串), todos(数组每项<=80字，无则[])。不要输出其它文字。文本:\n"+base.slice(0,6000);
-mask(true,lang==="zh"?"云端AI处理中…":"Cloud AI…");
-return hfChat(hfToken,prompt).then(function(out){
+function pack(note){return {extract:base,summary:summary,tags:tags,todos:todos,en:en,zh:zh,aiNote:note};}
+function tryHF(nextNote){
+if(!meta.hfToken)return Promise.resolve(pack(nextNote||(lang==="zh"?"（本地要点提炼）":"(Local bullets)")));
+mask(true,lang==="zh"?"HF 模型…":"HF…");
+var prompt=buildJsonPrompt(base,lang);
+return hfChat(meta.hfToken,prompt).then(function(out){
+mask(false);
 try{
 if(out){
-var m=String(out).match(/\{[\s\S]*\}/);
-if(m){
-var j=JSON.parse(m[0]);
-if(j.summary)summary=String(j.summary);
-if(Array.isArray(j.tags))tags=[].concat(j.tags.map(String).filter(Boolean)).filter(function(x,i,a){return a.indexOf(x)===i;}).slice(0,12);
-if(Array.isArray(j.todos)){
-var seen={};
-todos.forEach(function(t){seen[t]=1;});
-j.todos.map(String).forEach(function(t){if(t&&!seen[t]){seen[t]=1;todos.push(t);}});
-todos=todos.slice(0,50);
-}
-aiNote=lang==="zh"?"（已用 HF 模型增强）":"(HF enhanced)";
+var j=parseJsonFromModelText(out);
+if(j){
+var mg=mergeParsedJson(j,summary,tags,todos);
+summary=mg.summary;tags=mg.tags;todos=mg.todos;
+return pack(lang==="zh"?"（HF 模型）":"(HF)");
 }
 }
-}catch(e){aiNote=lang==="zh"?"（云端AI解析失败，已降级）":"(AI parse fallback)";}
-if(!aiNote)aiNote=lang==="zh"?"（云端AI无有效输出）":"(No AI output)";
-return {extract:base,summary:summary,tags:tags,todos:todos,en:en,zh:zh,aiNote:aiNote};
-}).finally(function(){mask(false);});
+}catch(e){}
+return pack(nextNote||(lang==="zh"?"（HF 无有效 JSON，保留本地结果）":""));
+}).catch(function(){mask(false);return pack(nextNote);});
+}
+var hasLLM=meta.llmBaseUrl&&meta.llmKey&&String(meta.llmBaseUrl).trim()&&String(meta.llmKey).trim();
+if(hasLLM){
+mask(true,lang==="zh"?"通义/LLM…":"LLM…");
+return llmChatComplete(meta,buildJsonPrompt(base,lang)).then(function(text){
+mask(false);
+if(text){
+var j=parseJsonFromModelText(text);
+if(j){
+var mg=mergeParsedJson(j,summary,tags,todos);
+summary=mg.summary;tags=mg.tags;todos=mg.todos;
+return pack(lang==="zh"?"（通义/兼容 API）":"(LLM)");
+}
+}
+return tryHF(lang==="zh"?"（API 无解析结果或跨域失败，尝试 HF）":"");
+}).catch(function(){mask(false);return tryHF(lang==="zh"?"（LLM 请求失败，尝试 HF）":"");});
+}
+if(meta.hfToken)return tryHF();
+return Promise.resolve(pack(lang==="zh"?"（本地要点提炼；可在设置配置通义）":"(Local; add LLM in Settings)"));
 });
 }
 
@@ -385,41 +627,132 @@ return {title:title,text:text.slice(0,8000)};
 });
 }
 
-document.getElementById("langSel").addEventListener("change",function(e){
+function bindClick(id,fn){
+var el=document.getElementById(id);
+if(el)el.addEventListener("click",fn);
+}
+function bindChange(id,fn){
+var el=document.getElementById(id);
+if(el)el.addEventListener("change",fn);
+}
+
+bindChange("langSel",function(e){
 LANG=e.target.value;applyI18n();renderAll();
 });
 
-document.getElementById("btnLogin").addEventListener("click",function(){
+bindClick("langZh",function(){LANG="zh";applyI18n();});
+bindClick("langEn",function(){LANG="en";applyI18n();});
+
+bindClick("btnGotoRegister",function(){
+showAuthPanel("register");
+document.getElementById("rgUser").value=document.getElementById("lgUser").value.trim();
+document.getElementById("rgPass").value="";
+document.getElementById("rgPass2").value="";
+});
+bindClick("btnBackFromRegister",function(){
+showAuthPanel("login");
+document.getElementById("lgUser").value=document.getElementById("rgUser").value.trim();
+});
+bindClick("btnGotoReset",function(){
+showAuthPanel("reset");
+document.getElementById("rsUser").value=document.getElementById("lgUser").value.trim();
+document.getElementById("rsPass").value="";
+document.getElementById("rsPass2").value="";
+});
+bindClick("btnBackFromReset",function(){
+showAuthPanel("login");
+document.getElementById("lgUser").value=document.getElementById("rsUser").value.trim();
+});
+
+function doLoginSuccess(u){
+CURRENT_USER=u;
+document.getElementById("loginPage").classList.add("hidden");
+document.getElementById("app").classList.remove("hidden");
+showAuthPanel("login");
+var meta=loadMeta(u);
+document.getElementById("llmBaseUrl").value=meta.llmBaseUrl||"";
+document.getElementById("llmKey").value=meta.llmKey||"";
+document.getElementById("llmModel").value=meta.llmModel||"qwen-turbo";
+document.getElementById("hfToken").value=meta.hfToken||"";
+document.getElementById("adminPwd").value="";
+document.getElementById("lgPass").value="";
+LAST_INPUT_TYPE="text";
+renderAll();
+}
+
+bindClick("btnLogin",function(){
 var u=document.getElementById("lgUser").value.trim();
 var p=document.getElementById("lgPass").value;
 if(!u||!p){toast(T("t_username")+" / "+T("t_password"));return;}
 sha256Hex(p).then(function(h){
 var reg=loadRegistry();
-if(!reg.users[u])reg.users[u]={passHash:h,created:Date.now()};
-else if(reg.users[u].passHash!==h){toast(LANG==="zh"?"密码错误":"Bad password");return;}
-saveRegistry(reg);
-CURRENT_USER=u;
-document.getElementById("loginPage").classList.add("hidden");
-document.getElementById("app").classList.remove("hidden");
-var meta=loadMeta(u);
-document.getElementById("hfToken").value=meta.hfToken||"";
-document.getElementById("adminPwd").value="";
-LAST_INPUT_TYPE="text";
-renderAll();
+if(!reg.users[u]){toast(LANG==="zh"?"用户不存在，请先注册":"No user; register first");return;}
+if(reg.users[u].passHash!==h){toast(LANG==="zh"?"密码错误":"Bad password");return;}
+doLoginSuccess(u);
 }).catch(function(){
-toast(LANG==="zh"?"无法校验密码：请允许加载 jsDelivr 脚本，或用本地服务器/https 打开（file:// 下无 Web Crypto）":"Password hash failed. Allow CDN or use http(s)://");
+toast(LANG==="zh"?"无法校验密码：请允许加载 jsDelivr 脚本，或用本地服务器/https 打开":"Password hash failed. Allow CDN or use http(s)://");
 });
 });
 
-document.getElementById("btnLogout").addEventListener("click",function(){
+bindClick("btnRegisterSubmit",function(){
+var u=document.getElementById("rgUser").value.trim();
+var p=document.getElementById("rgPass").value;
+var p2=document.getElementById("rgPass2").value;
+if(!u||!p){toast(T("t_username")+" / "+T("t_password"));return;}
+if(p.length<4){toast(T("t_pwd_short"));return;}
+if(p!==p2){toast(T("t_pwd_mismatch"));return;}
+var reg=loadRegistry();
+if(reg.users[u]){toast(T("t_user_exists"));return;}
+sha256Hex(p).then(function(h){
+reg.users[u]={passHash:h,created:Date.now(),builtin:false};
+saveRegistry(reg);
+toast(T("t_register_ok"));
+showAuthPanel("login");
+document.getElementById("lgUser").value=u;
+document.getElementById("lgPass").value="";
+document.getElementById("rgPass").value="";
+document.getElementById("rgPass2").value="";
+}).catch(function(){
+toast(LANG==="zh"?"注册失败：哈希不可用":"Register hash failed");
+});
+});
+
+bindClick("btnResetSubmit",function(){
+var u=document.getElementById("rsUser").value.trim();
+var p=document.getElementById("rsPass").value;
+var p2=document.getElementById("rsPass2").value;
+if(!u||!p){toast(T("t_username")+" / "+T("t_new_password"));return;}
+if(p.length<4){toast(T("t_pwd_short"));return;}
+if(p!==p2){toast(T("t_pwd_mismatch"));return;}
+var reg=loadRegistry();
+if(!reg.users[u]){toast(T("t_user_not_found"));return;}
+sha256Hex(p).then(function(h){
+reg.users[u].passHash=h;
+saveRegistry(reg);
+toast(T("t_reset_ok"));
+showAuthPanel("login");
+document.getElementById("lgUser").value=u;
+document.getElementById("lgPass").value="";
+document.getElementById("rsPass").value="";
+document.getElementById("rsPass2").value="";
+}).catch(function(){
+toast(LANG==="zh"?"重置失败":"Reset failed");
+});
+});
+
+bindClick("btnLogout",function(){
 CURRENT_USER=null;LAST_AI=null;adminUnlocked=false;
 document.getElementById("app").classList.add("hidden");
 document.getElementById("loginPage").classList.remove("hidden");
+showAuthPanel("login");
 });
 
-document.getElementById("btnSaveSettings").addEventListener("click",function(){
+bindClick("btnSaveSettings",function(){
 if(!CURRENT_USER)return;
 var meta=loadMeta(CURRENT_USER);
+meta.llmBaseUrl=document.getElementById("llmBaseUrl").value.trim();
+meta.llmKey=document.getElementById("llmKey").value.trim();
+meta.llmModel=document.getElementById("llmModel").value.trim()||"qwen-turbo";
 meta.hfToken=document.getElementById("hfToken").value.trim();
 var ap=document.getElementById("adminPwd").value;
 var done=function(){saveMeta(CURRENT_USER,meta);toast(LANG==="zh"?"已保存":"Saved");};
@@ -428,7 +761,7 @@ else done();
 });
 
 var recog=null;
-document.getElementById("btnVoice").addEventListener("click",function(){
+bindClick("btnVoice",function(){
 var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 if(!SR){toast(LANG==="zh"?"当前环境不支持语音识别":"No speech API");return;}
 if(recog)try{recog.stop();}catch(e){}
@@ -446,7 +779,7 @@ recog.start();
 toast(LANG==="zh"?"请说话…":"Speak…");
 });
 
-document.getElementById("fileImg").addEventListener("change",function(e){
+(function(){var fi=document.getElementById("fileImg");if(!fi)return;fi.addEventListener("change",function(e){
 var f=e.target.files[0];
 if(!f)return;
 mask(true,"OCR…");
@@ -459,9 +792,9 @@ toast("OCR OK");
 })
 .catch(function(){toast("OCR fail");})
 .finally(function(){mask(false);e.target.value="";});
-});
+});})();
 
-document.getElementById("fileDoc").addEventListener("change",function(e){
+(function(){var fd=document.getElementById("fileDoc");if(!fd)return;fd.addEventListener("change",function(e){
 var f=e.target.files[0];
 if(!f)return;
 mask(true,"DOC…");
@@ -474,16 +807,16 @@ LAST_INPUT_TYPE="doc";
 })
 .catch(function(){toast("DOC fail");})
 .finally(function(){mask(false);e.target.value="";});
-});
+});})();
 
-document.getElementById("btnParseUrl").addEventListener("click",function(){
+bindClick("btnParseUrl",function(){
 var u=document.getElementById("urlIn").value.trim();
 if(!u){toast("URL?");return;}
 mask(true,"URL…");
 fetchTextFromUrl(u)
 .then(function(x){
 var isChannels=/channels\.weixin\.qq\.com|weixin\.qq\.com\/sph\//i.test(u);
-var head=(isChannels?(LANG==="zh"?"【视频号链接】":"[Channels]")+" "+x.title+"\n"+u+"\n\n"):(x.title+"\n"+u+"\n\n");
+var head=(isChannels?(LANG==="zh"?"【视频号链接】":"[Channels]")+" "+x.title+"\n"+u+"\n\n":(x.title+"\n"+u+"\n\n"));
 var t=document.getElementById("textIn");
 t.value=head+(x.text||"(empty)");
 LAST_INPUT_TYPE=isChannels?"channels":"url";
@@ -510,11 +843,11 @@ box.appendChild(sp);
 });
 }
 
-document.getElementById("btnAiProcess").addEventListener("click",function(){
+bindClick("btnAiProcess",function(){
 var raw=document.getElementById("textIn").value;
 if(!String(raw).trim()){toast("empty");return;}
 var meta=loadMeta(CURRENT_USER);
-aiPipeline(raw,meta.hfToken,LANG).then(function(res){
+aiPipeline(raw,meta,LANG).then(function(res){
 LAST_AI=res;
 document.getElementById("aiPreview").textContent=
 (LANG==="zh"?"摘要：":"Summary: ")+LAST_AI.summary+"\n\n"+
@@ -525,7 +858,7 @@ renderTagEditor();
 });
 });
 
-document.getElementById("btnAddTag").addEventListener("click",function(){
+bindClick("btnAddTag",function(){
 var t=document.getElementById("newTag").value.trim();
 if(!t||!LAST_AI)return;
 if(LAST_AI.tags.indexOf(t)<0)LAST_AI.tags.push(t);
@@ -542,7 +875,7 @@ if(LAST_INPUT_TYPE)return LAST_INPUT_TYPE;
 return "text";
 }
 
-document.getElementById("btnArchive").addEventListener("click",function(){
+bindClick("btnArchive",function(){
 if(!CURRENT_USER)return;
 var raw=document.getElementById("textIn").value.trim();
 if(!raw){toast("empty");return;}
@@ -573,7 +906,7 @@ toast(LANG==="zh"?"已归档":"Archived");
 renderAll();
 }
 if(!LAST_AI){
-aiPipeline(raw,meta.hfToken,LANG).then(function(res){LAST_AI=res;saveEntry();});
+aiPipeline(raw,meta,LANG).then(function(res){LAST_AI=res;saveEntry();});
 }else saveEntry();
 });
 
@@ -613,21 +946,24 @@ items.forEach(function(it){
 var div=document.createElement("div");
 div.className="item";
 var tagHtml=it.tags.map(function(t){return "<span class=\"tag\">"+escapeHtml(t)+"</span>";}).join(" ");
-div.innerHTML="<h3>"+escapeHtml(it.summary||it.text.slice(0,40))+"</h3>"+
+div.innerHTML="<h3>"+escapeHtml((((it.summary||it.text).split("\n")[0])||it.text.slice(0,40)).slice(0,88))+"</h3>"+
 "<div class=\"muted\">"+T("t_time")+": "+new Date(it.created).toLocaleString()+" · "+T("t_type")+": "+escapeHtml(it.type)+" · "+T("t_src")+": "+escapeHtml(it.source||"")+"</div>"+
 "<div style=\"margin-top:6px\">"+tagHtml+"</div>"+
 "<div style=\"margin-top:6px;white-space:pre-wrap;word-break:break-word\">"+escapeHtml(it.text.slice(0,400))+(it.text.length>400?"…":"")+"</div>"+
 "<div class=\"row\" style=\"margin-top:8px\"><button type=\"button\" class=\"btn danger\" data-id=\""+escapeHtml(it.id)+"\">"+T("t_del")+"</button></div>";
 box.appendChild(div);
 });
-box.querySelectorAll("button[data-id]").forEach(function(btn){
+var delBtns=box.querySelectorAll("button[data-id]");
+for(var bi=0;bi<delBtns.length;bi++){
+(function(btn){
 btn.addEventListener("click",function(){
 var id=btn.getAttribute("data-id");
 var all=loadUserData(CURRENT_USER).filter(function(x){return x.id!==id;});
 saveUserData(CURRENT_USER,all);
 renderAll();
 });
-});
+})(delBtns[bi]);
+}
 }
 
 function renderTodos(){
@@ -659,12 +995,12 @@ lines.push("");
 return lines.join("\n");
 }
 
-document.getElementById("expMd").addEventListener("click",function(){
+bindClick("expMd",function(){
 var blob=new Blob([aggregateTodosMd()],{type:"text/markdown;charset=utf-8"});
 saveAs(blob,"todos.md");
 });
 
-document.getElementById("expDocx").addEventListener("click",function(){
+bindClick("expDocx",function(){
 var docxlib=window.docx;
 if(!docxlib||typeof saveAs!=="function"){toast("docx/saveAs");return;}
 var Document=docxlib.Document,Packer=docxlib.Packer,Paragraph=docxlib.Paragraph,TextRun=docxlib.TextRun;
@@ -708,13 +1044,18 @@ renderTodos();
 renderCharts();
 }
 
-document.getElementById("q").addEventListener("input",function(){renderList();});
-document.getElementById("fTag").addEventListener("change",function(){renderList();});
-document.getElementById("fType").addEventListener("change",function(){renderList();});
+(function(){var q=document.getElementById("q");if(q)q.addEventListener("input",function(){renderList();});})();
+(function(){var ft=document.getElementById("fTag");if(ft)ft.addEventListener("change",function(){renderList();});})();
+(function(){var fty=document.getElementById("fType");if(fty)fty.addEventListener("change",function(){renderList();});})();
 
-document.querySelectorAll("#roleTabs .tab").forEach(function(tab){
+(function(){
+var tabs=document.querySelectorAll("#roleTabs .tab");
+var i;
+for(i=0;i<tabs.length;i++){
+(function(tab){
 tab.addEventListener("click",function(){
-document.querySelectorAll("#roleTabs .tab").forEach(function(t){t.classList.remove("on");});
+var k;
+for(k=0;k<tabs.length;k++)tabs[k].classList.remove("on");
 tab.classList.add("on");
 var role=tab.getAttribute("data-role");
 var userP=document.getElementById("userPanel");
@@ -722,9 +1063,11 @@ var adminP=document.getElementById("adminPanel");
 if(role==="user"){userP.classList.remove("hidden");adminP.classList.add("hidden");}
 else{userP.classList.add("hidden");adminP.classList.remove("hidden");adminUnlocked=false;document.getElementById("adminBody").classList.add("hidden");}
 });
-});
+})(tabs[i]);
+}
+})();
 
-document.getElementById("btnAdminUnlock").addEventListener("click",function(){
+bindClick("btnAdminUnlock",function(){
 var meta=loadMeta(CURRENT_USER);
 var input=document.getElementById("adminPass2").value;
 if(!meta.adminPwdHash){toast(LANG==="zh"?"请先在设置里设定管理员密码":"Set admin pwd in settings");return;}
@@ -778,9 +1121,9 @@ destroyChart(charts.cAdminUsers);
 charts.cAdminUsers=new Chart(document.getElementById("cAdminUsers"),{type:"pie",data:{labels:ulabels,datasets:[{data:udata,backgroundColor:["#22c55e","#3b82f6","#eab308","#f97316","#ec4899","#14b8a6","#a855f7","#ef4444","#0ea5e9","#84cc16"]}]},options:{plugins:{legend:{position:"bottom"}},responsive:true,maintainAspectRatio:false}});
 }
 
-document.getElementById("aq").addEventListener("input",function(){renderAdmin();});
+(function(){var aq=document.getElementById("aq");if(aq)aq.addEventListener("input",function(){renderAdmin();});})();
 
-applyI18n();
+ensureBuiltInAccounts().then(function(){applyI18n();}).catch(function(){applyI18n();});
 })();
 </script>
 </body>
